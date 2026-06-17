@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="utf-8">
+
+<title>출석체크 QR 스캔</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+
+body{
+  text-align:center;
+  font-family:Arial,sans-serif;
+  padding:20px;
+}
+
+h2{
+  margin-bottom:20px;
+}
+
+#reader{
+  width:350px;
+  margin:auto;
+}
+
+#result{
+  margin-top:20px;
+  font-size:24px;
+  font-weight:bold;
+  min-height:80px;
+}
+
+.success{
+  color:green;
+}
+
+.error{
+  color:red;
+}
+
+.waiting{
+  color:black;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>출석체크 QR 스캔</h2>
+
+<div id="reader"></div>
+
+<div id="result" class="waiting">
+스캔 대기중
+</div>
+
+<script>
+
+const API_URL =
+"https://script.google.com/macros/s/AKfycbxBY9ktTzYNJJGBLLe5K2zPPCE5nZt5oJojKEC87bVsY0SGvwuMT88o6ybYgUdxq7fn/exec";
+
+let processing = false;
+
+const qrScanner =
+new Html5Qrcode("reader");
+
+async function startScanner(){
+
+  await qrScanner.start(
+
+    { facingMode:"environment" },
+
+    {
+      fps:10,
+      qrbox:250
+    },
+
+    async function(decodedText){
+
+      if(processing) return;
+
+      processing = true;
+
+      const result =
+        document.getElementById("result");
+
+      result.className = "waiting";
+      result.innerHTML = "조회중...";
+
+      try{
+
+        const response =
+          await fetch(
+            API_URL +
+            "?token=" +
+            encodeURIComponent(decodedText)
+          );
+
+        const data =
+          await response.json();
+
+        if(data.success){
+
+          result.className = "success";
+
+        }else{
+
+          result.className = "error";
+        }
+
+        result.innerHTML =
+          data.message +
+          "<br>" +
+          (data.email || "");
+
+      }catch(err){
+
+        result.className = "error";
+
+        result.innerHTML =
+          "서버 연결 실패";
+      }
+
+      setTimeout(()=>{
+
+        result.className = "waiting";
+
+        result.innerHTML =
+          "스캔 대기중";
+
+        processing = false;
+
+      },2000);
+
+    }
+  );
+}
+
+startScanner();
+
+</script>
+
+</body>
+</html>
